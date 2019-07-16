@@ -1,9 +1,11 @@
 package exe;
 
 
+import java.util.concurrent.atomic.AtomicLong;
+
 import org.apache.log4j.Logger;
 
-import util.Other;
+import utility.Other;
 
 import com.trs.hybase.client.TRSConnection;
 import com.trs.hybase.client.TRSException;
@@ -14,6 +16,9 @@ import com.trs.hybase.client.params.ConnectParams;
 import exe.Setting.SearchType;
 
 public class Searcher implements Runnable{
+	private static AtomicLong count = new AtomicLong(0);
+	private final long id = count.getAndAdd(1);
+	
 	private static Logger logger = Logger.getLogger(Searcher.class);
 	/* TRSConnection */
 	private TRSConnection conn = null;
@@ -29,6 +34,9 @@ public class Searcher implements Runnable{
 	private Setting setting = null;
 	public Setting getSetting(){
 		return this.setting;
+	}
+	public long id(){
+		return this.id;
 	}
 	/*
 	 * 构造器私有
@@ -46,49 +54,58 @@ public class Searcher implements Runnable{
 	@Override
 	public void run(){
 		TRSResultSet resultSet = null;
+		String query = "*:*";
 		try{
-			String query = "\""+this.wordFactory.output()+"\"";
+			String output = this.wordFactory.output();
+			if(output == null || "".equals(output)){ 
+				logger.warn("id=="+this.id + ", wordFactory.output() == null || wordFactory.output().isEmpty()");
+			}else{
+				query = output;
+			}
 			if(this.setting.getSearchType() == SearchType.Category){
 				 resultSet = this.conn.categoryQuery(this.setting.getDatabase(), query, this.setting.getDefaultSearchColumn(), this.setting.getCategoryColumn(), this.setting.getReturnNumber());
 				 this.wordFactory.addSearchCount();
 				 this.wordFactory.updateNowTime();
 				 if(this.setting.getResultIsDisplay()){
-					 logger.debug(resultSet.getCategoryMap());
+					 logger.debug("id=="+this.id + ", resultSet.getCategoryMap()==" + resultSet.getCategoryMap());
 				 }
 			}else if(this.setting.getSearchType() == SearchType.ExpressionQuery){
 				 resultSet = this.conn.expressionQuery(this.setting.getDatabase(), query, this.setting.getExpressionQueryExpression(), this.setting.getSearchParams());
 				 this.wordFactory.addSearchCount();
 				 this.wordFactory.updateNowTime();
 				 if(this.setting.getResultIsDisplay()){
-					 logger.debug(resultSet.getExpressionResult(this.setting.getExpressionQueryColumn()));
+					 logger.debug("id=="+this.id+", resultSet.getExpressionResult()=="+resultSet.getExpressionResult(this.setting.getExpressionQueryColumn()));
 				 }
 			}else{
 				 resultSet = this.conn.executeSelect(this.setting.getDatabase(),  query, 0, this.setting.getReturnNumber(), this.setting.getSearchParams());
 				 this.wordFactory.addSearchCount();
 				 this.wordFactory.updateNowTime();
-				 logger.debug(System.lineSeparator()+
-						 "<SearchExperession>= "+query+System.lineSeparator()+
-						 "<TRSResultSet.getNumFound>= "+resultSet.getNumFound()+System.lineSeparator()+
-						 "<TRSResultSet.size>= "+resultSet.size());
 				 if(this.setting.getResultIsDisplay()){
+					 if(this.setting.displayNumberFound()){
+						 logger.debug("id=="+this.id+", searchExpression=="+query+", resultSet.getNumFound()=="+resultSet.getNumFound());
+						 return;
+					 }
 					 TRSRecord record = null;
 					 String[] columns = null;
 					 StringBuilder sb = new StringBuilder();
 					 while(resultSet.moveNext()){
-						 record = resultSet.get();
-						 columns = record.getColumnNames();
-						 sb.append(System.lineSeparator()+"================"+System.lineSeparator());
-						 for(int i=0; i<columns.length; i++){
-							 sb.append(columns[i]+" : "+record.getString(columns[i])+System.lineSeparator());
-						 }
-						 sb.append(System.lineSeparator());
-					 }
-					 logger.debug(sb.toString());
+						record = resultSet.get();
+						columns = record.getColumnNames();
+						sb.append(System.lineSeparator()+"================"+System.lineSeparator());
+						for(int i=0; i<columns.length; i++){
+							sb.append(columns[i]+" : "+record.getString(columns[i])+System.lineSeparator());
+						}
+						sb.append(System.lineSeparator());
+					}
+					logger.debug(sb.toString());
 				 }
 			}
 		}catch(TRSException ex){
 			ex.printStackTrace();
-			logger.error(ex.getErrorCode()+" : "+ex.getErrorString()+System.lineSeparator()+Other.exceptionToStackTrace(ex));
+			wordFactory.errorMapUpdateValue(ex.getErrorCode(), ex.getErrorString());
+			logger.error(
+					"id=="+this.id+"searchExpression=="+query+", errorCode=="+ex.getErrorCode()+", errorMsg=="+ex.getErrorString()+System.lineSeparator()+
+					Other.stackTraceToString(ex)+System.lineSeparator());
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}finally{

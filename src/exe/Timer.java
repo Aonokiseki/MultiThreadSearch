@@ -1,5 +1,8 @@
 package exe;
 
+import java.util.Map;
+import java.util.Map.Entry;
+
 import org.apache.log4j.Logger;
 
 public class Timer implements Runnable{
@@ -12,13 +15,30 @@ public class Timer implements Runnable{
 	
 	@Override
 	public void run(){
-		double runTime = 0.0; long searchCount = 0; double average;
+		int cycleCount = 0;
+		Map<String, Integer> errorMap = null;
+		StringBuilder sb = new StringBuilder();
+		double runTime = 0.0; 
+		long searchCount = 0; 
+		double average;
 		long birthTime = this.wf.getBirthTime();
 		for(;;){
-			runTime = ((this.wf.getNowTime() - birthTime));
+			cycleCount++;
+			runTime = this.wf.getNowTime() - birthTime;
 			searchCount = this.wf.getSearchCount();
-			average = ((runTime) /  (searchCount+1));
-			logger.debug("Task has run "+ (long)(runTime/1000) +"s, it has completed "+searchCount+" search quests, average respond time: "+(long)average+" (ms/count)");
+			if(searchCount == 0)
+				average = Double.NaN;
+			else
+				average = runTime / (searchCount);
+			logger.debug("Task has run "+ (long)(runTime/1000) +"s, " +"it has completed "+searchCount+" search quests, average respond time: "+(long)average+" (ms/count)");
+			if(cycleCount % 360 == 0){
+				cycleCount = 1;
+				errorMap = wf.getErrorMap();
+				sb.delete(0, sb.length());
+				for(Entry<String, Integer> e : errorMap.entrySet())
+					sb.append(e.getKey() + " : " + e.getValue() + System.lineSeparator());
+				logger.debug("Exceptions in total: "+System.lineSeparator() + sb.toString());
+			}
 			try {
 				Thread.sleep(10000);
 			} catch (InterruptedException e) {

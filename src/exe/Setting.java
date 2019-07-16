@@ -1,7 +1,7 @@
 package exe;
 
 import java.util.Map;
-import util.MapOperator;
+import utility.MapOperator;
 import com.trs.hybase.client.params.SearchParams;
 
 
@@ -23,6 +23,7 @@ public class Setting {
 					  SearchParams sp,
 					  int returnNumber,
 					  boolean resultIsDisplay,
+					  boolean displayNumberFound,
 					  SearchType searchType,
 					  String defaultSearchColumn,
 					  String categoryColumn,
@@ -36,6 +37,7 @@ public class Setting {
 		this.sp = sp;
 		this.returnNumber = returnNumber;
 		this.resultIsDisplay = resultIsDisplay;
+		this.displayNumberFound = displayNumberFound;
 		this.searchType = searchType;
 		this.defaultSearchColumn = defaultSearchColumn;
 		this.categoryColumn = categoryColumn;
@@ -73,11 +75,23 @@ public class Setting {
 		if(MapOperator.mapHasNonNullValue(config, "search.match.rate")){
 			sp.setProperty("search.match.rate", config.get("search.match.rate"));
 		}
+		if(MapOperator.mapHasNonNullValue(config, "search.phrase.wildcard")){
+			sp.setProperty("search.phrase.wildcard", config.get("search.phrase.wildcard"));
+		}
+		if(MapOperator.mapHasNonNullValue(config, "consume.expr.timeout")){
+			sp.setProperty("consume.expr.timeout", config.get("consume.expr.timeout"));
+		}
+		if(MapOperator.mapHasNonNullValue(config, "allow.consume.expr")){
+			sp.setProperty("allow.consume.expr", config.get("allow.consume.expr"));
+		}
 		if(MapOperator.mapHasNonNullValue(config, "result.read.column")){
 			sp.setReadColumns(config.get("result.read.column"));
 		}
 		if(MapOperator.mapHasNonNullValue(config, "result.sort.method")){
 			sp.setSortMethod(config.get("result.sort.method"));
+		}
+		if(MapOperator.mapHasNonNullValue(config, "search.time.out")){
+			sp.setTimeOut(Long.valueOf(config.get("search.time.out")));
 		}
 		int returnNumber = 10;
 		if(MapOperator.mapHasNonNullValue(config, "result.return.number")){
@@ -86,6 +100,10 @@ public class Setting {
 		boolean resultIsDisplay = false;
 		if(MapOperator.mapHasNonNullValue(config, "result.is.display")){
 			resultIsDisplay = Boolean.valueOf(config.get("result.is.display"));
+		}
+		boolean displayNumberFound = false;
+		if(MapOperator.mapHasNonNullValue(config, "display.number.found")){
+			displayNumberFound = Boolean.valueOf(config.get("display.number.found"));
 		}
 		SearchType searchType = SearchType.Select;
 		if(MapOperator.mapHasNonNullValue(config, "search.type")){
@@ -119,6 +137,7 @@ public class Setting {
 		if((searchType == SearchType.ExpressionQuery) && (expressionQueryExpression == "" || expressionQueryColumn == "")){
 			throw new NullPointerException("Can not find expressionQueryExpression or expressionQueryColumn!");
 		}
+		
 		return new Setting(hostArray, 
 							user, 
 							password, 
@@ -126,6 +145,7 @@ public class Setting {
 							sp, 
 							returnNumber, 
 							resultIsDisplay, 
+							displayNumberFound,
 							searchType, 
 							defaultSearchColumn,
 							categoryColumn,
@@ -133,6 +153,7 @@ public class Setting {
 							expressionQueryColumn
 							);
 	}
+	
 	
 	/*主机列表*/
 	private String[] hostArray;
@@ -148,6 +169,8 @@ public class Setting {
 	private int returnNumber;
 	/*是否屏幕打印结果*/
 	private boolean resultIsDisplay;
+	/*子开关, 当屏幕打印结果时, 是否只打印命中记录数*/
+	private boolean displayNumberFound;
 	/*检索类型*/
 	private SearchType searchType;
 	/*默认检索字段*/
@@ -182,6 +205,9 @@ public class Setting {
 	}
 	public boolean getResultIsDisplay(){
 		return this.resultIsDisplay;
+	}
+	public boolean displayNumberFound(){
+		return this.displayNumberFound;
 	}
 	public SearchType getSearchType(){
 		return this.searchType;
