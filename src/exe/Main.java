@@ -5,61 +5,56 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
-
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+import utility.FileOperator;
 import org.apache.log4j.Logger;
 import org.apache.log4j.PropertyConfigurator;
-
-import utility.FileOperator;
-import utility.Other;
 
 public class Main {
 	
 	private final static Logger logger = Logger.getLogger(Main.class);
+	private final static String READ_CONFIG_PATH = "./config/readConfig.ini";
+	private final static String SEARCH_CONFIG_PATH = "./config/searchConfig.ini";
+	private final static String LOG4J_PROPERTY_PATH = "./config/log4j.properties";
+	private final static String CHARACTOR_WORD_FILE_DIRECTORY = "word.file.directory";
+	private final static String CHARACTOR_WORD_FILE_ENCODING = "word.file.encoding";
+	private final static String CHARACOTR_MAX_SEARCH_THREAD = "max.search.thread";
+	private final static String CHARACTOR_WORD_LIST_SIZE = "word.list.size";
+	private final static String DEFAULT_ENCODING = "UTF-8";
 	
 	public static void main(String[] args){
-		PropertyConfigurator.configure("./log4j.properties");
-		int currentThreadNumber = 0;
-		Thread searchThread = null;
+		PropertyConfigurator.configure(LOG4J_PROPERTY_PATH);
 		try {
+			/*读取配置文件, */
+			Map<String, String> readSetting = FileOperator.readConfiguration(READ_CONFIG_PATH, DEFAULT_ENCODING);
+			Setting setting = Setting.build(FileOperator.readConfiguration(SEARCH_CONFIG_PATH, DEFAULT_ENCODING));
+			/*构造检索词工厂*/
+			List<File> fileList = FileOperator.traversal(readSetting.get(CHARACTOR_WORD_FILE_DIRECTORY), null, new HashMap<String,String>());
+			WordFactory wordFactory = new WordFactory(fileList, readSetting.get(CHARACTOR_WORD_FILE_ENCODING), Integer.valueOf(readSetting.get(CHARACTOR_WORD_LIST_SIZE)));
 			/* 开启读文件线程,输入检索词到队列 */
-			Map<String, String> readSetting = FileOperator.readConfiguration("./readConfig.ini", "UTF-8");
-			List<File> fileList = FileOperator.traversal(readSetting.get("word.file.directory"), null, new HashMap<String,String>());
-			WordFactory wordFactory = new WordFactory(fileList, readSetting.get("word.file.encoding"), Integer.valueOf(readSetting.get("word.list.size")));
-			Thread loadWord = new Thread(new WordReader(wordFactory));
-			loadWord.setName("LoadWord-"+UUID.randomUUID());
-			loadWord.start();
-			/* 开启计时器 */
-			Thread timer = new Thread(new Timer(wordFactory));
-			timer.setName("Timer");
-			timer.setDaemon(true);
-			timer.start();
-			/* 开启检索线程 */
-			Setting setting = Setting.build(FileOperator.readConfiguration("./searchConfig.ini", "UTF-8"));
-			int maxThreadNumber = Integer.valueOf(readSetting.get("max.search.thread"));
-			Thread[] threads = null;
-			Searcher searcher = null;
-			for(;;){
-				currentThreadNumber = 0;
-				threads = Other.getListThreads();
-				for(int i=0; i<threads.length; i++){
-					if(threads[i] == null || threads[i].getName() == null || threads[i].getName().isEmpty())
-						continue;
-					if(threads[i].getName().contains("SearchThread_"))
-						currentThreadNumber++;
-				}
-				if(currentThreadNumber >= maxThreadNumber)
-					continue;
-				for(int i=0; i<maxThreadNumber - currentThreadNumber; i++){
-					searcher = Searcher.build(setting, wordFactory);
-					searchThread = new Thread(searcher);
-					searchThread.setName("SearchThread_"+searcher.id());
-					searchThread.start();
-				}
-			}
+			new Thread(new WordReader(wordFactory)).start();
+			/* 开启计时器线程 */
+			new Thread(new Timer(wordFactory)).start();
+			/* 开启检索线程池 */
+			int maxThreadNumber = Integer.valueOf(readSetting.get(CHARACOTR_MAX_SEARCH_THREAD));
+			ThreadPoolExecutor threadPoolExecutor = new ThreadPoolExecutor(maxThreadNumber, maxThreadNumber, 0, TimeUnit.MICROSECONDS, new LinkedBlockingQueue<Runnable>());
+			while(true){
+				threadPoolExecutor.submit(Searcher.build(setting, wordFactory));
+				waitOneMillSecond();
+			}	
 		} catch (IOException e) {
 			e.printStackTrace();
 			logger.error(e.getMessage());
+		}
+	}
+	
+	public static void waitOneMillSecond(){
+		try {
+			Thread.sleep(1);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
 		}
 	}
 }

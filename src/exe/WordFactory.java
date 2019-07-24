@@ -13,6 +13,15 @@ import java.util.concurrent.atomic.AtomicLong;
 
 
 public class WordFactory {
+	/*
+	 * encoding,wordListSize,birthTime 实际上当作常量在用, 不需要考虑线程安全
+	 * 
+	 * nowTime, searchCount, errorMap 选用了线程安全的类型
+	 * 
+	 * wordList 本身非线程安全, 但是push和pop操作都加上了同步锁
+	 * 
+	 * fileList 本身非线程安全, 但是只有一个线程在修改这个变量
+	 */
 	private List<File> fileList;
 	private String encoding;
 	private List<String> wordList;

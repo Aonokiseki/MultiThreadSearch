@@ -110,6 +110,7 @@ public class Searcher implements Runnable{
 			e.printStackTrace();
 		}finally{
 			this.conn.close();
+			Thread.yield();
 		}
 	}
 }
