@@ -1,19 +1,14 @@
 package exe;
 
-
 import java.util.concurrent.atomic.AtomicLong;
-
 import org.apache.log4j.Logger;
-
 import utility.Other;
-
 import com.trs.hybase.client.TRSConnection;
 import com.trs.hybase.client.TRSException;
 import com.trs.hybase.client.TRSRecord;
 import com.trs.hybase.client.TRSResultSet;
 import com.trs.hybase.client.params.ConnectParams;
 
-import exe.Setting.SearchType;
 
 public class Searcher implements Runnable{
 	private static AtomicLong count = new AtomicLong(0);
@@ -53,52 +48,18 @@ public class Searcher implements Runnable{
 	
 	@Override
 	public void run(){
-		TRSResultSet resultSet = null;
 		String query = "*:*";
 		try{
 			String output = this.wordFactory.output();
-			if(output == null || "".equals(output)){ 
+			if(output == null || "".equals(output))
 				logger.warn("id=="+this.id + ", wordFactory.output() == null || wordFactory.output().isEmpty()");
-			}else{
+			else
 				query = output;
-			}
-			if(this.setting.getSearchType() == SearchType.Category){
-				 resultSet = this.conn.categoryQuery(this.setting.getDatabase(), query, this.setting.getDefaultSearchColumn(), this.setting.getCategoryColumn(), this.setting.getReturnNumber());
-				 this.wordFactory.addSearchCount();
-				 this.wordFactory.updateNowTime();
-				 if(this.setting.getResultIsDisplay()){
-					 logger.debug("id=="+this.id + ", resultSet.getCategoryMap()==" + resultSet.getCategoryMap());
-				 }
-			}else if(this.setting.getSearchType() == SearchType.ExpressionQuery){
-				 resultSet = this.conn.expressionQuery(this.setting.getDatabase(), query, this.setting.getExpressionQueryExpression(), this.setting.getSearchParams());
-				 this.wordFactory.addSearchCount();
-				 this.wordFactory.updateNowTime();
-				 if(this.setting.getResultIsDisplay()){
-					 logger.debug("id=="+this.id+", resultSet.getExpressionResult()=="+resultSet.getExpressionResult(this.setting.getExpressionQueryColumn()));
-				 }
-			}else{
-				 resultSet = this.conn.executeSelect(this.setting.getDatabase(),  query, 0, this.setting.getReturnNumber(), this.setting.getSearchParams());
-				 this.wordFactory.addSearchCount();
-				 this.wordFactory.updateNowTime();
-				 if(this.setting.getResultIsDisplay()){
-					 if(this.setting.displayNumberFound()){
-						 logger.debug("id=="+this.id+", searchExpression=="+query+", resultSet.getNumFound()=="+resultSet.getNumFound());
-						 return;
-					 }
-					 TRSRecord record = null;
-					 String[] columns = null;
-					 StringBuilder sb = new StringBuilder();
-					 while(resultSet.moveNext()){
-						record = resultSet.get();
-						columns = record.getColumnNames();
-						sb.append(System.lineSeparator()+"================"+System.lineSeparator());
-						for(int i=0; i<columns.length; i++){
-							sb.append(columns[i]+" : "+record.getString(columns[i])+System.lineSeparator());
-						}
-						sb.append(System.lineSeparator());
-					}
-					logger.debug(sb.toString());
-				 }
+			switch(setting.getSearchType()){
+				case Category: category(query); break;
+				case ExpressionQuery: expressionQuery(query); break;
+				case Select: executeSelect(query); break;
+				default: executeSelect(query); break;
 			}
 		}catch(TRSException ex){
 			ex.printStackTrace();
@@ -112,5 +73,53 @@ public class Searcher implements Runnable{
 			this.conn.close();
 			Thread.yield();
 		}
+	}
+	
+	/*分类统计*/
+	public void category(String query) throws TRSException{
+		 TRSResultSet resultSet = this.conn.categoryQuery(this.setting.getDatabase(), query, this.setting.getDefaultSearchColumn(), this.setting.getCategoryColumn(), this.setting.getReturnNumber());
+		 this.wordFactory.addSearchCount();
+		 this.wordFactory.updateNowTime();
+		 if(this.setting.getResultIsDisplay()){
+			 logger.debug("id=="+this.id + ", resultSet.getCategoryMap()==" + resultSet.getCategoryMap());
+		 }
+	}
+	/*统计检索*/
+	public void expressionQuery(String query) throws TRSException{
+		 TRSResultSet resultSet = this.conn.expressionQuery(this.setting.getDatabase(), query, this.setting.getExpressionQueryExpression(), this.setting.getSearchParams());
+		 this.wordFactory.addSearchCount();
+		 this.wordFactory.updateNowTime();
+		 if(this.setting.getResultIsDisplay()){
+			 logger.debug("id=="+this.id+", resultSet.getExpressionResult()=="+resultSet.getExpressionResult(this.setting.getExpressionQueryColumn()));
+		 }
+	}
+	/*普通检索*/
+	public void executeSelect(String query) throws TRSException{
+		 TRSResultSet resultSet = this.conn.executeSelect(this.setting.getDatabase(),  query, 0, this.setting.getReturnNumber(), this.setting.getSearchParams());
+		 this.wordFactory.addSearchCount();
+		 this.wordFactory.updateNowTime();
+		 if(this.setting.getResultIsDisplay()){
+			 if(this.setting.displayNumberFound()){
+				 logger.debug("id=="+this.id+", searchExpression=="+query+", resultSet.getNumFound()=="+resultSet.getNumFound());
+				 return;
+			 }
+			 printPerRecord(resultSet);
+		 }
+	}
+	/*普通检索-打印结果集*/
+	private void printPerRecord(TRSResultSet resultSet) throws TRSException{
+		TRSRecord record = null;
+		 String[] columns = null;
+		 StringBuilder sb = new StringBuilder();
+		 while(resultSet.moveNext()){
+			record = resultSet.get();
+			columns = record.getColumnNames();
+			sb.append(System.lineSeparator()+"================"+System.lineSeparator());
+			for(int i=0; i<columns.length; i++){
+				sb.append(columns[i]+" : "+record.getString(columns[i])+System.lineSeparator());
+			}
+			sb.append(System.lineSeparator());
+		}
+		logger.debug(sb.toString());
 	}
 }
