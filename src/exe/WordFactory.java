@@ -5,6 +5,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.time.LocalDateTime;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -26,19 +27,12 @@ public class WordFactory {
 	private String encoding;
 	private List<String> wordList;
 	private int wordListSize;
-	private long birthTime;
-	private AtomicLong nowTime;
+	private LocalDateTime birthTime;
 	private AtomicLong searchCount;
 	private ConcurrentHashMap<String,Integer> errorMap;
 	
-	public long getBirthTime(){
+	public LocalDateTime getBirthTime(){
 		return this.birthTime;
-	}
-	public void updateNowTime(){
-		this.nowTime.set(System.currentTimeMillis());
-	}
-	public long getNowTime(){
-		return this.nowTime.get();
 	}
 	
 	public Map<String, Integer> getErrorMap(){
@@ -76,8 +70,7 @@ public class WordFactory {
 		this.fileList = fileList;
 		this.encoding = encoding;
 		this.wordListSize = wordListSize;
-		this.birthTime = System.currentTimeMillis();
-		this.nowTime = new AtomicLong(System.currentTimeMillis());
+		this.birthTime = LocalDateTime.now();
 		this.errorMap = new ConcurrentHashMap<String, Integer>();
 		this.searchCount = new AtomicLong(0);
 	}
@@ -107,14 +100,12 @@ public class WordFactory {
 		while(wordList.size() == this.wordListSize)
 			this.wait();
 		this.notify();
-		this.nowTime.set(System.currentTimeMillis());
 		wordList.add(currentLineText);	
 	}
 	private synchronized String pop() throws InterruptedException{
 		while(wordList.size() == 0)
 			this.wait();
 		this.notify();
-		this.nowTime.set(System.currentTimeMillis());
 		return wordList.remove(0);
 	}
 }

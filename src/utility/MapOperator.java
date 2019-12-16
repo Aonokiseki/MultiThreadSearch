@@ -20,4 +20,18 @@ public final class MapOperator {
 			return false;
 		return true;
 	}
+	/**
+	 * 安全获取map中的value
+	 * @param map
+	 * @param key
+	 * @param resultWhenICannotGetValue 当获取指定value失败时的返回值, 此值由使用者决定
+	 * @return T
+	 */
+	public static <T> T safetyGet(Map<String, T> map, String key, T resultWhenICannotGetValue){
+		if(map == null || map.isEmpty() || map.size() == 0 || key == null || "".equals(key.trim()))
+			return resultWhenICannotGetValue;
+		if(!map.containsKey(key))
+			return resultWhenICannotGetValue;
+		return map.get(key);
+	}
 }

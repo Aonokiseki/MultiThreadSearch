@@ -26,6 +26,7 @@ public class Main {
 	
 	public static void main(String[] args){
 		PropertyConfigurator.configure(LOG4J_PROPERTY_PATH);
+		ThreadPoolExecutor threadPoolExecutor = null;
 		try {
 			/*读取配置文件, */
 			Map<String, String> readSetting = FileOperator.readConfiguration(READ_CONFIG_PATH, DEFAULT_ENCODING);
@@ -39,22 +40,18 @@ public class Main {
 			new Thread(new Timer(wordFactory)).start();
 			/* 开启检索线程池 */
 			int maxThreadNumber = Integer.valueOf(readSetting.get(CHARACOTR_MAX_SEARCH_THREAD));
-			ThreadPoolExecutor threadPoolExecutor = new ThreadPoolExecutor(maxThreadNumber, maxThreadNumber, 0, TimeUnit.MICROSECONDS, new LinkedBlockingQueue<Runnable>());
+			threadPoolExecutor = new ThreadPoolExecutor(maxThreadNumber, maxThreadNumber, 0L, TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>(maxThreadNumber));
 			while(true){
+				if(threadPoolExecutor.getActiveCount() >= maxThreadNumber || threadPoolExecutor.getQueue().size() > 0)
+					continue;
 				threadPoolExecutor.submit(Searcher.build(setting, wordFactory));
-				waitOneMillSecond();
-			}	
+			}
 		} catch (IOException e) {
 			e.printStackTrace();
 			logger.error(e.getMessage());
-		}
-	}
-	
-	public static void waitOneMillSecond(){
-		try {
-			Thread.sleep(1);
-		} catch (InterruptedException e) {
-			e.printStackTrace();
+		} finally{
+			if(threadPoolExecutor != null && !threadPoolExecutor.isShutdown())
+				threadPoolExecutor.shutdownNow();
 		}
 	}
 }

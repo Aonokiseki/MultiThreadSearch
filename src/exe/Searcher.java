@@ -42,7 +42,7 @@ public class Searcher implements Runnable{
 		Searcher searcher = new Searcher();
 		searcher.wordFactory = wordFactory;
 		searcher.setting = setting;
-		searcher.conn = new TRSConnection(setting.getARandomHost(), setting.getUser(), setting.getPassword(), new ConnectParams());
+		searcher.conn = new TRSConnection(setting.getHosts(), setting.getUser(), setting.getPassword(), new ConnectParams());
 		return searcher;
 	}
 	
@@ -79,7 +79,6 @@ public class Searcher implements Runnable{
 	public void category(String query) throws TRSException{
 		 TRSResultSet resultSet = this.conn.categoryQuery(this.setting.getDatabase(), query, this.setting.getDefaultSearchColumn(), this.setting.getCategoryColumn(), this.setting.getReturnNumber());
 		 this.wordFactory.addSearchCount();
-		 this.wordFactory.updateNowTime();
 		 if(this.setting.getResultIsDisplay()){
 			 logger.debug("id=="+this.id + ", resultSet.getCategoryMap()==" + resultSet.getCategoryMap());
 		 }
@@ -88,7 +87,6 @@ public class Searcher implements Runnable{
 	public void expressionQuery(String query) throws TRSException{
 		 TRSResultSet resultSet = this.conn.expressionQuery(this.setting.getDatabase(), query, this.setting.getExpressionQueryExpression(), this.setting.getSearchParams());
 		 this.wordFactory.addSearchCount();
-		 this.wordFactory.updateNowTime();
 		 if(this.setting.getResultIsDisplay()){
 			 logger.debug("id=="+this.id+", resultSet.getExpressionResult()=="+resultSet.getExpressionResult(this.setting.getExpressionQueryColumn()));
 		 }
@@ -97,7 +95,6 @@ public class Searcher implements Runnable{
 	public void executeSelect(String query) throws TRSException{
 		 TRSResultSet resultSet = this.conn.executeSelect(this.setting.getDatabase(),  query, 0, this.setting.getReturnNumber(), this.setting.getSearchParams());
 		 this.wordFactory.addSearchCount();
-		 this.wordFactory.updateNowTime();
 		 if(this.setting.getResultIsDisplay()){
 			 if(this.setting.displayNumberFound()){
 				 logger.debug("id=="+this.id+", searchExpression=="+query+", resultSet.getNumFound()=="+resultSet.getNumFound());

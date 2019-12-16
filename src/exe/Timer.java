@@ -1,9 +1,12 @@
 package exe;
 
+import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.Map.Entry;
 
 import org.apache.log4j.Logger;
+
+import utility.ChronoOperator;
 
 public class Timer implements Runnable{
 	private final static Logger logger = Logger.getLogger(Timer.class);
@@ -18,19 +21,20 @@ public class Timer implements Runnable{
 		int cycleCount = 0;
 		Map<String, Integer> errorMap = null;
 		StringBuilder sb = new StringBuilder();
-		double runTime = 0.0; 
+		long runTime = 0; 
 		long searchCount = 0; 
 		double average;
-		long birthTime = this.wf.getBirthTime();
+		LocalDateTime birth = this.wf.getBirthTime();
 		for(;;){
 			cycleCount++;
-			runTime = this.wf.getNowTime() - birthTime;
+			runTime = ChronoOperator.timeDifference(birth, LocalDateTime.now()).getSeconds();
 			searchCount = this.wf.getSearchCount();
-			if(searchCount == 0)
-				average = Double.NaN;
-			else
-				average = runTime / (searchCount);
-			logger.debug("Task has run "+ (long)(runTime/1000) +"s, " +"it has completed "+searchCount+" search quests, average respond time: "+(long)average+" (ms/count)");
+			if(searchCount > 0){
+				average = ((double)(runTime))/((double)(searchCount));
+				logger.debug("Total task: "+searchCount+", total time(s): "+runTime+", average respond time(s): "+average);
+			}else{
+				logger.debug("Total task: 0, total time(s): "+runTime);
+			}
 			if(cycleCount % 360 == 0){
 				cycleCount = 1;
 				errorMap = wf.getErrorMap();

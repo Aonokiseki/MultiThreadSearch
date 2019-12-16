@@ -14,149 +14,70 @@ public class Setting {
 	 */
 	public static enum SearchType{
 		Select,Category,ExpressionQuery;
+		
+		public static SearchType build(String name){
+			if("category".equals(name))
+				return SearchType.Category;
+			if("expressionQuery".equals(name))
+				return SearchType.ExpressionQuery;
+			return SearchType.Select;
+		}
 	};
 	
-	private Setting(String[] hostArray,
-					  String user,
-					  String password,
-					  String database,
-					  SearchParams sp,
-					  int returnNumber,
-					  boolean resultIsDisplay,
-					  boolean displayNumberFound,
-					  SearchType searchType,
-					  String defaultSearchColumn,
-					  String categoryColumn,
-					  String expressionQueryExpression,
-					  String expressionQueryColumn
-			){
-		this.hostArray = hostArray;
-		this.user = user;
-		this.password = password;
-		this.databaseName = database;
-		this.sp = sp;
-		this.returnNumber = returnNumber;
-		this.resultIsDisplay = resultIsDisplay;
-		this.displayNumberFound = displayNumberFound;
-		this.searchType = searchType;
-		this.defaultSearchColumn = defaultSearchColumn;
-		this.categoryColumn = categoryColumn;
-		this.expressionQueryExpression = expressionQueryExpression;
-		this.expressionQueryColumn = expressionQueryColumn;
-	}
+	private final static Setting SETTING = new Setting();
+	
+	private Setting(){}
 	
 	public static Setting build(Map<String,String> config){
-		String[] hostArray = new String[]{"http://127.0.0.1:5555"};
-		if(MapOperator.mapHasNonNullValue(config, "host.name")){
-			hostArray = config.get("host.name").split(";");
-			if(hostArray.length == 0){
-				hostArray = new String[]{"http://127.0.0.1:5555"};
-			}
-		}
-		String user = "admin";
-		if(MapOperator.mapHasNonNullValue(config, "user.name")){
-			user = config.get("user.name");
-		}
-		String password = "trsadmin";
-		if(MapOperator.mapHasNonNullValue(config, "user.password")){
-			password = config.get("user.password");
-		}
-		String databaseName = "demo";
-		if(MapOperator.mapHasNonNullValue(config, "database.name")){
-			databaseName = config.get("database.name");
-		}
+		String hosts = MapOperator.safetyGet(config, "host.name", "http://127.0.0.1:5555");
+		String user = MapOperator.safetyGet(config, "user.name", "admin");
+		String password = MapOperator.safetyGet(config, "user.password", "trsadmin");
+		String databaseName = MapOperator.safetyGet(config, "database.name", "");
 		SearchParams sp = new SearchParams();
-		if(MapOperator.mapHasNonNullValue(config, "search.local.prior")){
-			sp.setProperty("search.local.prior", config.get("search.local.prior"));
-		}
-		if(MapOperator.mapHasNonNullValue(config, "search.match.max")){
-			sp.setProperty("search.match.max", config.get("search.match.max"));
-		}
-		if(MapOperator.mapHasNonNullValue(config, "search.match.rate")){
-			sp.setProperty("search.match.rate", config.get("search.match.rate"));
-		}
-		if(MapOperator.mapHasNonNullValue(config, "search.phrase.wildcard")){
-			sp.setProperty("search.phrase.wildcard", config.get("search.phrase.wildcard"));
-		}
-		if(MapOperator.mapHasNonNullValue(config, "consume.expr.timeout")){
-			sp.setProperty("consume.expr.timeout", config.get("consume.expr.timeout"));
-		}
-		if(MapOperator.mapHasNonNullValue(config, "allow.consume.expr")){
-			sp.setProperty("allow.consume.expr", config.get("allow.consume.expr"));
-		}
-		if(MapOperator.mapHasNonNullValue(config, "result.read.column")){
+		sp.setProperty("search.local.prior", MapOperator.safetyGet(config, "search.local.prior", ""));
+		sp.setProperty("search.match.max", MapOperator.safetyGet(config, "search.match.max", ""));
+		sp.setProperty("search.match.rate", MapOperator.safetyGet(config, "search.match.rate", ""));
+		sp.setProperty("search.phrase.wildcard", MapOperator.safetyGet(config, "search.phrase.wildcard", ""));
+		sp.setProperty("consume.expr.timeout", MapOperator.safetyGet(config, "consume.expr.timeout", ""));
+		sp.setProperty("allow.consume.expr", MapOperator.safetyGet(config, "allow.consume.expr", ""));
+		sp.setProperty("search.read.prior", MapOperator.safetyGet(config, "search.read.prior", ""));
+		if(MapOperator.mapHasNonNullValue(config, "result.read.column"))   
 			sp.setReadColumns(config.get("result.read.column"));
-		}
-		if(MapOperator.mapHasNonNullValue(config, "result.sort.method")){
+		if(MapOperator.mapHasNonNullValue(config, "result.sort.method"))
 			sp.setSortMethod(config.get("result.sort.method"));
-		}
-		if(MapOperator.mapHasNonNullValue(config, "search.time.out")){
+		if(MapOperator.mapHasNonNullValue(config, "search.time.out"))
 			sp.setTimeOut(Long.valueOf(config.get("search.time.out")));
-		}
-		int returnNumber = 10;
-		if(MapOperator.mapHasNonNullValue(config, "result.return.number")){
-			returnNumber = Integer.valueOf(config.get("result.return.number"));
-		}
-		boolean resultIsDisplay = false;
-		if(MapOperator.mapHasNonNullValue(config, "result.is.display")){
-			resultIsDisplay = Boolean.valueOf(config.get("result.is.display"));
-		}
-		boolean displayNumberFound = false;
-		if(MapOperator.mapHasNonNullValue(config, "display.number.found")){
-			displayNumberFound = Boolean.valueOf(config.get("display.number.found"));
-		}
-		SearchType searchType = SearchType.Select;
-		if(MapOperator.mapHasNonNullValue(config, "search.type")){
-			if(config.get("search.type").equals("category")){
-				searchType = SearchType.Category;
-			}else if(config.get("search.type").equals("expressionQuery")){
-				searchType = SearchType.ExpressionQuery;
-			}else{
-				searchType = SearchType.Select;
-			}
-		}
-		String defaultSearchColumn = "";
-		if(MapOperator.mapHasNonNullValue(config, "default.search.column")){
-			defaultSearchColumn = config.get("default.search.column");
-		}
-		String categoryColumn = "";
-		if(MapOperator.mapHasNonNullValue(config, "category.column")){
-			categoryColumn = config.get("category.column");
-		}
-		if((searchType == SearchType.Category) && (defaultSearchColumn == "" || categoryColumn == "")){
+		int returnNumber = Integer.valueOf(MapOperator.safetyGet(config, "result.return.number", "10"));
+		boolean resultIsDisplay = Boolean.parseBoolean(MapOperator.safetyGet(config, "result.is.display", "false"));
+		boolean displayNumberFound = Boolean.parseBoolean(MapOperator.safetyGet(config, "display.number.found", "false"));
+		SearchType searchType = SearchType.build(MapOperator.safetyGet(config, "search.type", "select"));
+		String defaultSearchColumn = MapOperator.safetyGet(config, "default.search.column", "");
+		String categoryColumn = MapOperator.safetyGet(config, "category.column", "");
+		if((searchType == SearchType.Category) && ("".equals(defaultSearchColumn) || "".equals(categoryColumn)))
 			throw new NullPointerException("Can not find defaultSearchColumn or CategoryColumn!");
-		}
-		String expressionQueryExpression = "";
-		if(MapOperator.mapHasNonNullValue(config, "expression.query.expression")){
-			expressionQueryExpression = config.get("expression.query.expression");
-		}
-		String expressionQueryColumn = "";
-		if(MapOperator.mapHasNonNullValue(config, "expression.query.return")){
-			expressionQueryColumn = config.get("expression.query.return");
-		}
-		if((searchType == SearchType.ExpressionQuery) && (expressionQueryExpression == "" || expressionQueryColumn == "")){
-			throw new NullPointerException("Can not find expressionQueryExpression or expressionQueryColumn!");
-		}
+		String expressionQueryExpression = MapOperator.safetyGet(config, "expression.query.expression", "");
+		String expressionQueryColumn = MapOperator.safetyGet(config, "expression.query.return", "");
+		if((searchType == SearchType.ExpressionQuery) && ("".equals(expressionQueryExpression) || "".equals(expressionQueryColumn)))
+			throw new NullPointerException("Can not find expressionQueryExpression or expressionQueryColumn!");	
 		
-		return new Setting(hostArray, 
-							user, 
-							password, 
-							databaseName, 
-							sp, 
-							returnNumber, 
-							resultIsDisplay, 
-							displayNumberFound,
-							searchType, 
-							defaultSearchColumn,
-							categoryColumn,
-							expressionQueryExpression,
-							expressionQueryColumn
-							);
+		return SETTING.setHosts(hosts)
+					   .setUser(user)
+					   .setPassword(password)
+					   .setDatabase(databaseName)
+					   .setSearchParams(sp)
+					   .setReturnNumber(returnNumber)
+					   .setResultIsDisplay(resultIsDisplay)
+					   .setDisplayNumberFound(displayNumberFound)
+					   .setSearchType(searchType)
+					   .setDefaultSearchColumn(defaultSearchColumn)
+					   .setCategoryColumn(categoryColumn)
+					   .setExpressionQueryExpressions(expressionQueryExpression)
+					   .setExpressionQueryColumn(expressionQueryColumn);
 	}
 	
 	
 	/*主机列表*/
-	private String[] hostArray;
+	private String hosts;
 	/*用户名*/
 	private String user;
 	/*密码*/
@@ -182,47 +103,95 @@ public class Setting {
 	/*统计检索取值字段*/
 	private String expressionQueryColumn;
 	
-	public String[] getHostArray(){
-		return this.hostArray;
+	public String getHosts(){
+		return this.hosts;
 	}
-	public String getARandomHost(){
-		return this.hostArray[(int)(Math.random()*hostArray.length)];
+	public Setting setHosts(String hosts){
+		this.hosts = hosts;
+		return this;
 	}
 	public String getUser(){
 		return this.user;
 	}
+	public Setting setUser(String user){
+		this.user = user;
+		return this;
+	}
 	public String getPassword(){
 		return this.password;
+	}
+	public Setting setPassword(String password){
+		this.password = password;
+		return this;
 	}
 	public String getDatabase(){
 		return this.databaseName;
 	}
+	public Setting setDatabase(String databaseName){
+		this.databaseName = databaseName;
+		return this;
+	}
 	public SearchParams getSearchParams(){
 		return this.sp;
+	}
+	public Setting setSearchParams(SearchParams sp){
+		this.sp = sp;
+		return this;
 	}
 	public int getReturnNumber(){
 		return this.returnNumber;
 	}
+	public Setting setReturnNumber(int returnNumber){
+		this.returnNumber = returnNumber;
+		return this;
+	}
 	public boolean getResultIsDisplay(){
 		return this.resultIsDisplay;
+	}
+	public Setting setResultIsDisplay(boolean resultIsDisplay){
+		this.resultIsDisplay = resultIsDisplay;
+		return this;
 	}
 	public boolean displayNumberFound(){
 		return this.displayNumberFound;
 	}
+	public Setting setDisplayNumberFound(boolean displayNumberFound){
+		this.displayNumberFound = displayNumberFound;
+		return this;
+	}
 	public SearchType getSearchType(){
 		return this.searchType;
+	}
+	public Setting setSearchType(SearchType searchType){
+		this.searchType = searchType;
+		return this;
 	}
 	public String getDefaultSearchColumn(){
 		return this.defaultSearchColumn;
 	}
+	public Setting setDefaultSearchColumn(String defaultSearchColumn){
+		this.defaultSearchColumn = defaultSearchColumn;
+		return this;
+	}
 	public String getCategoryColumn(){
 		return this.categoryColumn;
+	}
+	public Setting setCategoryColumn(String categoryColumn){
+		this.categoryColumn = categoryColumn;
+		return this;
 	}
 	public String getExpressionQueryExpression(){
 		return this.expressionQueryExpression;
 	}
+	public Setting setExpressionQueryExpressions(String expressionQueryExpression){
+		this.expressionQueryExpression = expressionQueryExpression;
+		return this;
+	}
 	public String getExpressionQueryColumn(){
 		return this.expressionQueryColumn;
 	}
-	
+	public Setting setExpressionQueryColumn(String expressionQueryColumn){
+		this.expressionQueryColumn = expressionQueryColumn;
+		return this;
+	}
 }
